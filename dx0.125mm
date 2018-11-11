@@ -1,0 +1,44 @@
+!---------------HEADER-----------------!
+FINI !Exits all old scripts
+/CLEAR !Clears workspace
+/PREP7 !Starts command interface
+NACSINIT !Starts NACS interface, requires start162.ans in your home and/or simulation directory
+
+!-------------set parameters---------------!
+magnitude = 1e-6
+ma = magnitude
+dx =0.125*ma
+!----------------geometry-----------------!
+rectng,0,20*ma,0,0.5*ma		!electrode
+rectng,0,20*ma,0.5*ma,1*ma		!SrTiO3
+rectng,0,20*ma,1*ma,1.5*ma		!electrode
+rectng,0,20*ma,1.5*ma,2.5*ma		!air
+rectng,0,12*ma,2.5*ma,3*ma		!electrode
+rectng,12*ma,20*ma,2.5*ma,3*ma	!air
+rectng,0,20*ma,-0.5*ma,0		!additional air at bottom
+rectng,0,20*ma,3*ma,3.5*ma		!additional air at top
+rectng,20*ma,20.5*ma,-0.5*ma,3.5*ma	!additional air at top
+!connect geometry
+asel,all
+aglue,all
+!------------------mesh-------------------!
+lsel,all
+lesize,all,dx
+setelems,'quadr',''
+asel,all
+amesh,all
+!---------------components----------------!
+!asel,stat
+asel,s,loc,x,0,20*ma
+asel,s,loc,x,0,12*ma
+asel,u,loc,y,-0.5*ma,0
+asel,u,loc,y,0.5*ma,1*ma
+asel,u,loc,y,1.5*ma,2.5*ma
+asel,u,loc,y,3*ma,3.5*ma
+CM,electrode,area
+asel,s,loc,y,0.5*ma,1*ma
+CM,Si,area
+asel,all
+asel,u,,,electrode
+asel,u,,,Si
+CM,air,area
