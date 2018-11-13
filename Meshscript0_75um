@@ -1,0 +1,163 @@
+!!!! HEADER !!!!
+FINI
+/CLEAR
+/PREP7
+NACSINIT
+
+!!!! PARAMS !!!!
+r1 = 12e-6
+r2 = 20e-6
+dair = 5e-6
+del = 0.5e-6
+d1 = 1e-6
+d2 = 0.5e-6
+h = d1+d2+3*del
+dx = 0.75e-6
+
+!!!! Geometry !!!!
+RECTNG,0,r2,-dair,0						!Luft unterhalb des Kondensators
+RECTNG,0,r2,0,del						!Untere Kondensatorplatte
+RECTNG,0,r2,del,del+d2					!SrTiO3 Dielectric
+RECTNG,0,r2,del+d2,2*del+d2				!Mittlere Kondensatorplatte
+RECTNG,0,r2,2*del+d2,2*del+d2+d1		!Dielectric Luft
+RECTNG,0,r1,h-del,h						!Obere Kondensatorplatte
+RECTNG,r1,r2,h-del,h					!Luft neben Kondensatorplatte
+RECTNG,r2,r2+dair,-dair,h+dair			!Luft Rechts Aussen
+RECTNG,0,r2,h,h+dair					!Luft über dem Kondensator
+
+
+!!!! CONNECT GEOMETRY !!!!
+
+ASEL, all		!Select all areas
+AGLUE, all		!Glue all selected areas
+
+
+
+
+!!!! SETUP MESH !!!!
+
+! 1. set mesh size (for our purpose usually on lines)
+LSEL,all							!Select all lines
+					!Note that is also possible to set a different mesh size
+					!to each lines in your model
+LESIZE,all,dx						!Set the mesh size dx on all selected lines
+
+
+! 2. mesh all areas
+SETELEMS,'quadr',''					!Use elements of first order
+			!(for later mechanic simulations you will
+			!also need second order elements using
+			!'quadr','quad' instead of 'quadr','')
+ASEL,all !Select all areas
+AMESH,all !Mesh all selected areas
+
+
+
+
+
+!!!! CREATE COMPONENTS !!!!
+
+! CM,name,etype -> creates a component called name of all currently selected
+! !entities of type etype (can be NODE, LINE, AREA, VOLU)
+
+
+			!! Untere Elektrode !!
+
+ASEL,s,loc,x,0,r2
+ASEL,r,loc,y,0,del
+CM,elec3,area
+
+			!! SrTiO3 Dielectric !!
+ASEL,s,loc,x,0,r2
+ASEL,r,loc,y,del,del+d2
+CM,diel,area
+
+			!! Mittlere Elektrode !!
+ASEL,s,loc,x,0,r2
+ASEL,r,loc,y,del+d2,2*del+d2
+CM,elec2,area
+
+			!! Obere Elektrode !!
+ASEL,s,loc,x,0,r1
+ASEL,r,loc,y,h-del,h
+CM,elec1,area
+
+			!! Luft !!
+	!To select all air regions at once one can select all three rectangles by their coordinates
+	!or one can select all areas and unselect the already named components
+
+ASEL,all									!Select all areas
+ASEL,u,,,elec1								!Unselect component named hotEL from current selection
+											!Note that the spaces for loc and x/y where kept free
+ASEL,u,,,elec2
+ASEL,u,,,elec3
+ASEL,u,,,diel								!Now only the three air areas are left
+CM,air,area
+
+!Select the top line and the observer point
+!Note that only existing lines and nodes can be selected (e.g. you cannot select
+!a line from the top left to the bottom right corner here)
+tol = dx/5									!When selecting lines or nodes allow a little tolerance
+											!as otherwise the selection might fail.
+											!Setting tol to a fraction of the mesh size is in most cases
+											!a good idea.
+LSEL,s,loc,x,0,r2+dair
+LSEL,r,loc,y,h+dair-tol,h+dair+tol
+CM,topLine,line
+
+NSEL,s,loc,x,r2+dair-tol,r2+dair+tol
+NSEL,r,loc,y,h-tol,h+tol
+CM,observer,node
+
+
+
+! the surface lines of an already defined area can be obtained using LSLA
+CMSEL,s,elec1 						! select area (in this case the area is inside the component hotEL)
+lsla,all 							! select ALL lines corresponding to this area (also inner ones!)
+lsel,r,ext 							! reselect to obtain ONLY the OUTER surface lines
+CM,elec1lines,line
+
+CMSEL,s,elec2
+lsla,all
+lsel,r,ext
+CM,elec2lines,line
+
+CMSEL,s,elec3
+lsla,all
+lsel,r,ext
+CM,elec3lines,line
+
+
+
+
+
+!!!! WRITE OUT MESH !!!!
+! 1. create regions for all area- and volume-components
+! REGION,'regionName','compName' -> creates region called regionName
+! !of component compName
+
+REGION,'elec1region','elec1'
+
+REGION,'elec2region','elec2'
+
+REGION,'elec3region','elec3'
+
+REGION,'dielregion','diel'
+
+REGION,'airregion','air'
+! 2. create groups for all line- and node-components
+! GROUP,'groupName','compName' -> creates group called groupName
+! !of component compName
+
+GROUP,'elec1surface','elec1lines'
+
+GROUP,'elec2surface','elec2lines'
+
+GROUP,'elec3surface','elec3lines'
+GROUP,'topLinegroup','topLine'
+GROUP,'observergroup','observer'
+! 3. write out model
+
+WRITEMODEL,'Assignment1_0_75um'
+
+
