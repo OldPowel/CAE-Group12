@@ -1,0 +1,121 @@
+!!!! HEADER !!!!
+FINI
+/CLEAR
+/PREP7
+NACSINIT
+
+!!!! PARAMS !!!!
+l = 0.96
+h = 0.012
+d = 0.02
+dx = 0.1
+dy = 0.01
+functiontype=1      ! 1 for SETELEMS,'quadr',''   2 for SETELEMS,'quadr','quad''
+
+!!!! Geometry !!!!
+RECTNG,0,l,0,h						!steelbeam
+
+
+
+!!!! CONNECT GEOMETRY !!!!
+
+!ASEL, all		!Select all areas
+!AGLUE, all		!Glue all selected areas
+
+
+
+
+!!!! SETUP MESH !!!!
+
+! 1. set mesh size (for our purpose usually on lines)
+LSEL,S,TAN1,X,-1.0
+LSEL,A,TAN1,X,1.0                   !Select all lines in X direction (?)
+                                    !Note that is also possible to set a different mesh size
+                                    !to each lines in your model
+LESIZE,all,dx						!Set the mesh size dx on all selected lines
+LSEL,S,TAN1,Y,-1.0
+LSEL,A,TAN1,Y,1.0
+LESIZE,all,dy
+
+
+! 2. mesh all areas
+*IF,functiontype,EQ,1,THEN
+SETELEMS,'quadr',''
+*ELSE
+SETELEMS,'quadr','quad'
+*ENDIF
+
+                                    !Use elements of first order
+                                    !(for later mechanic simulations you will
+                                    !also need second order elements using
+                                    !'quadr','quad' instead of 'quadr','')
+ASEL,all                            !Select all areas
+AMESH,all                           !Mesh all selected areas
+
+
+
+
+
+!!!! CREATE COMPONENTS !!!!
+
+! CM,name,etype -> creates a component called name of all currently selected
+! !entities of type etype (can be NODE, LINE, AREA, VOLU)
+
+
+			!! Beam !!
+
+ASEL,s,loc,x,0,l
+ASEL,r,loc,y,0,h
+CM,beam,area
+
+
+
+
+
+!Select the top line and the observer point
+!Note that only existing lines and nodes can be selected (e.g. you cannot select
+!a line from the top left to the bottom right corner here)
+tol = dy/2									!When selecting lines or nodes allow a little tolerance
+											!as otherwise the selection might fail.
+											!Setting tol to a fraction of the mesh size is in most cases
+											!a good idea.
+LSEL,s,loc,x,0-tol,l+tol
+LSEL,r,loc,y,h-tol,h+tol
+CM,topLine,line
+
+NSEL,s,loc,x,l-tol,l+tol
+NSEL,r,loc,y,h-tol,h+tol
+CM,observer,node
+
+
+
+! the surface lines of an already defined area can be obtained using LSLA
+CMSEL,s,beam 						! select area (in this case the area is inside the component hotEL)
+lsla,all 							! select ALL lines corresponding to this area (also inner ones!)
+lsel,r,ext 							! reselect to obtain ONLY the OUTER surface lines
+CM,beamlines,line
+
+
+
+
+!!!! WRITE OUT MESH !!!!
+! 1. create regions for all area- and volume-components
+! REGION,'regionName','compName' -> creates region called regionName
+! !of component compName
+
+REGION,'beamregion','beam'
+
+
+! 2. create groups for all line- and node-components
+! GROUP,'groupName','compName' -> creates group called groupName
+! !of component compName
+
+GROUP,'beamsurface','beamlines'
+
+GROUP,'topLinegroup','topLine'
+GROUP,'observergroup','observer'
+! 3. write out model
+
+WRITEMODEL,'Assignment2'
+
+
