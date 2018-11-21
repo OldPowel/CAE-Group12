@@ -42,3 +42,5 @@ asel,all
 asel,u,,,electrode
 asel,u,,,Si
 CM,air,area
+
+!test
